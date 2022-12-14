@@ -220,8 +220,8 @@ public class WebSpectra implements InterfaceWebSpectra
 					NovaElementsList = novaDynDBOper.getOneColumnUniqueResultSet(novaTableNamePrefix + DBTable.HierarchyTablePerTechnology2.toString(), "RootHierarchyNode",
 							new String[]{}, new String[]{}, new String[]{});
 				}
-				// Add in the list for WIND root elements the list for Nova Elements in the same array
-				ElementsList.addAll(NovaElementsList);
+				// TODO: Activate When Nova will be LIVE - Add in the list for WIND root elements the list for Nova Elements in the same array
+				// ElementsList.addAll(NovaElementsList);
 
 				String[] nodeNames = new String[] {};
 				String[] nodeValues = new String[] {};
