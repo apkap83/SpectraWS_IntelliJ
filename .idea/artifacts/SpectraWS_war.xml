@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="SpectraWS:war">
+    <output-path>$PROJECT_DIR$/target</output-path>
+    <properties id="maven-jee-properties">
+      <options>
+        <module>SpectraWS</module>
+        <packaging>war</packaging>
+      </options>
+    </properties>
+    <root id="archive" name="Spectra_WS-1.5.war">
+      <element id="artifact" artifact-name="SpectraWS:war exploded" />
+    </root>
+  </artifact>
+</component>

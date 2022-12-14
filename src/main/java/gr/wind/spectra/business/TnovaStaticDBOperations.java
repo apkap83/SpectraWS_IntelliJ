@@ -1,37 +1,30 @@
 package gr.wind.spectra.business;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
+import gr.wind.spectra.web.InvalidInputException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.sql.*;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-//Import log4j classes.
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import gr.wind.spectra.web.InvalidInputException;
-
-public class s_DB_Operations implements iStatic_DB_Operations {
+public class TnovaStaticDBOperations implements iStatic_DB_Operations
+{
 	// Logger instance
-	Logger logger = LogManager.getLogger(gr.wind.spectra.business.s_DB_Operations.class.getName());
+	Logger logger = LogManager.getLogger(TnovaStaticDBOperations.class.getName());
 
 	Connection conn;
 	Statement stmt = null;
 	ResultSet rs = null;
 
-	public s_DB_Operations(Connection conn)
+	public TnovaStaticDBOperations(Connection conn)
 	{
 		this.conn = conn;
 	}
 
-	@Override
 	public boolean checkIfStringExistsInSpecificColumn(String table, String columnName, String searchValue)
 			throws SQLException
 	{
@@ -57,7 +50,6 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return found;
 	}
 
-	@Override
 	public void updateUsageStatisticsForMethod(String methodName) throws SQLException, ParseException
 	{
 		// Get Date and Time and create a pattern of time representation
@@ -65,23 +57,22 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		LocalDateTime now = LocalDateTime.now();
 
 		// Check If today row exists
-		boolean exists = checkIfCriteriaExists("Stats_NumOfRequestsPerMethod", new String[] { "Date" },
+		boolean exists = checkIfCriteriaExists("Nova_Stats_NumOfRequestsPerMethod", new String[] { "Date" },
 				new String[] { dtf.format(now) }, new String[] { "DateTime" });
 
 		// If we have not today line entry of statistics the please create it
 		if (!exists)
 		{
-			insertValuesInTable("Stats_NumOfRequestsPerMethod", new String[] { "Date" },
+			insertValuesInTable("Nova_Stats_NumOfRequestsPerMethod", new String[] { "Date" },
 					new String[] { dtf.format(now) }, new String[] { "DateTime" });
 		}
 
 		// Update value using LAST_INSERT_ID method of MySQL e.g. SET ModifyOutage = LAST_INSERT_ID(ModifyOutage+1)
-		updateValuesBasedOnLastInsertID("Stats_NumOfRequestsPerMethod", methodName, new String[] { "Date" },
+		updateValuesBasedOnLastInsertID("Nova_Stats_NumOfRequestsPerMethod", methodName, new String[] { "Date" },
 				new String[] { dtf.format(now) }, new String[] { "DateTime" });
 
 	}
 
-	@Override
 	public boolean insertValuesInTable(String table, String[] columnNames, String[] columnValues, String[] types)
 			throws SQLException
 	{
@@ -129,13 +120,11 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 			statusOfOperation = false;
 			e.printStackTrace();
 			throw new SQLException();
-
 		}
 
 		return statusOfOperation;
 	}
 
-	@Override
 	public int getMaxIntegerValue(String table, String columnName) throws SQLException
 	{
 		int returnValue = 0;
@@ -153,12 +142,11 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return returnValue;
 	}
 
-	@Override
 	public boolean checkIfCriteriaExists(String table, String[] predicateKeys, String[] predicateValues,
-										 String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
-		Help_Func hf = new Help_Func();
 		boolean criteriaIfExists = false;
+		Help_Func hf = new Help_Func();
 
 		String sqlQuery = "SELECT COUNT(*) as Result FROM " + table + " WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -193,13 +181,12 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return criteriaIfExists;
 	}
 
-	@Override
 	public String getOneValue(String table, String columnName, String[] predicateKeys, String[] predicateValues,
-							  String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
+		String output;
 		Help_Func hf = new Help_Func();
 
-		String output;
 		String sqlQuery = "SELECT " + columnName + " FROM " + table + " WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
 		logger.trace(sqlQuery);
@@ -229,13 +216,11 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return output;
 	}
 
-	@Override
 	public List<String> getOneColumnUniqueResultSet(String table, String columnName, String[] predicateKeys,
-													String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 		// Example: select DISTINCT ID from table where a = 2 and b = 3
 		Help_Func hf = new Help_Func();
-
 		List<String> myList = new ArrayList<String>();
 
 		String sqlString = "SELECT DISTINCT `" + columnName + "` FROM `" + table + "` WHERE "
@@ -285,13 +270,13 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return myList;
 	}
 
-	@Override
 	public int updateValuesBasedOnLastInsertID(String table, String setColumnName, String[] predicateKeys,
-											   String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 
-		// Update value using LAST_INSERT_ID method of MySQL e.g. SET ModifyOutage = LAST_INSERT_ID(ModifyOutage+1)
 		Help_Func hf = new Help_Func();
+
+		// Update value using LAST_INSERT_ID method of MySQL e.g. SET ModifyOutage = LAST_INSERT_ID(ModifyOutage+1)
 
 		String sqlString = "update `" + table + "` set `" + setColumnName + "` = LAST_INSERT_ID(`" + setColumnName
 				+ "` + 1) WHERE " + hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -320,12 +305,11 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 
 	}
 
-	@Override
 	public int updateValuesForOneColumn(String table, String setColumnName, String newValue, String[] predicateKeys,
-										String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
-		// Example: update TestTable set `Name` = 100 where Surname = "Kapetanios";
+		// Example: update Table set `Name` = 100 where Surname = "Kapetanios";
 
 		String sqlString = "update `" + table + "` set `" + setColumnName + "` = '" + newValue + "' WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -354,13 +338,12 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 
 	}
 
-	@Override
 	public String numberOfRowsFound(String table, String[] predicateKeys, String[] predicateValues,
-									String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
+		int numOfRows = 0;
 		Help_Func hf = new Help_Func();
 
-		int numOfRows = 0;
 		String sqlQuery = "SELECT *" + " FROM " + table + " WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
 		logger.trace(sqlQuery);
@@ -388,11 +371,11 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return Integer.toString(numOfRows);
 	}
 
-	@Override
 	public String countDistinctRowsForSpecificColumn(String table, String column, String[] predicateKeys,
-													 String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		String numOfRows = "";
 		String sqlQuery = "SELECT COUNT(DISTINCT(" + column + ")) as " + column + " FROM " + table + " WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -429,11 +412,11 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 	 *
 	 */
 
-	@Override
 	public String countDistinctRowsForSpecificColumns(String table, String[] columns, String[] predicateKeys,
-													  String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		String numOfRows = "";
 		String sqlQuery = "SELECT COUNT(*) AS Result FROM(SELECT DISTINCT ";
 
@@ -474,9 +457,8 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return numOfRows;
 	}
 
-	@Override
 	public ResultSet getRows(String table, String[] columnNames, String[] predicateKeys, String[] predicateValues,
-							 String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
 
@@ -502,11 +484,10 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return rs;
 	}
 
-	@Override
 	public boolean authenticateRequest(String userName, String password, String serviceName) throws SQLException
 	{
 		boolean found = false;
-		String table = "WSAccounts";
+		String table = "Nova_WSAccounts";
 		String sqlString = "SELECT * FROM `" + table + "` WHERE `UserName` = ? AND `Service` = ?";
 		logger.trace(sqlString);
 		PreparedStatement pst = conn.prepareStatement(sqlString);
@@ -533,7 +514,6 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 				 * password, the stored passwords will still look different.
 				 */
 				Password psw = new Password();
-
 				passwordIsCorrect = psw.check(password, r_password);
 
 				//					System.out.println("password " + password);
@@ -555,9 +535,8 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return found;
 	}
 
-	@Override
 	public String maxNumberOfCustomersAffected(String table, String SumOfColumn, String[] predicateColumns,
-											   String[] predicateValues) throws SQLException
+			String[] predicateValues) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
 
@@ -582,15 +561,13 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		return numOfRows;
 	}
 
-	@Override
 	public int updateColumnOnSpecificCriteria(String tableName, String[] columnNamesForUpdate,
-											  String[] columnValuesForUpdate, String[] setColumnDataTypes, String[] predicateColumns,
-											  String[] predicateValues, String[] predicateColumnsDataTypes) throws SQLException, InvalidInputException
+			String[] columnValuesForUpdate, String[] setColumnDataTypes, String[] predicateColumns,
+			String[] predicateValues, String[] predicateColumnsDataTypes) throws SQLException, InvalidInputException
 	{
 		Help_Func hf = new Help_Func();
-
 		int numOfRowsUpdated = 0;
-		// update SmartOutageDB.Test_SubmittedIncidents set Duration = '2' where OutageID =
+		// update SmartOutageDB.SubmittedIncidents set Duration = '2' where OutageID =
 		// '5' and IncidentID = 'INC1';
 		String sqlQuery = "UPDATE " + tableName + " SET " + hf.generateCommaPredicateQuestionMarks(columnNamesForUpdate)
 				+ " WHERE " + hf.generateANDPredicateQuestionMarks(predicateColumns);

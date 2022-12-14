@@ -1,0 +1,56 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GlassFish 5.0.01" type="GlassfishConfiguration" factoryName="Remote" APPLICATION_SERVER_NAME="GlassFish 5.0.01" ALTERNATIVE_JRE_ENABLED="false" nameIsGenerated="true">
+    <option name="HOST" value="10.10.18.120" />
+    <option name="PORT" value="4848" />
+    <option name="LOCAL" value="false" />
+    <option name="OPEN_IN_BROWSER" value="false" />
+    <option name="UPDATING_POLICY" value="redeploy-artifacts" />
+    <deployment>
+      <artifact name="SpectraWS:war">
+        <settings>
+          <option name="contextRoot" value="/SpectraWS" />
+          <option name="defaultContextRoot" value="false" />
+        </settings>
+      </artifact>
+    </deployment>
+    <server-settings>
+      <data>
+        <option name="adminServerHost" value="" />
+        <option name="clusterName" value="" />
+        <option name="credentialAlias" value="069da758-98b7-4544-8b55-c7d6f0c83e08" />
+        <option name="preserve" value="true" />
+        <option name="secured" value="true" />
+        <option name="stagingRemotePath" value="" />
+        <option name="transportHostId" />
+        <option name="transportStagingTarget">
+          <TransportTarget>
+            <option name="id" value="fe1e34e4-6799-49bf-9178-e11998c48274" />
+            <id>fe1e34e4-6799-49bf-9178-e11998c48274</id>
+          </TransportTarget>
+        </option>
+        <credential-alias>069da758-98b7-4544-8b55-c7d6f0c83e08</credential-alias>
+        <preserve>true</preserve>
+        <secured>true</secured>
+        <admin-server-host />
+        <cluster-name />
+        <transport-target>
+          <TransportTarget>
+            <option name="id" value="fe1e34e4-6799-49bf-9178-e11998c48274" />
+            <id>fe1e34e4-6799-49bf-9178-e11998c48274</id>
+          </TransportTarget>
+        </transport-target>
+        <staging-path />
+      </data>
+    </server-settings>
+    <predefined_log_file enabled="true" id="GlassFish" />
+    <RunnerSettings RunnerId="Debug">
+      <option name="DEBUG_PORT" value="60396" />
+      <option name="LOCAL" value="false" />
+    </RunnerSettings>
+    <method v="2">
+      <option name="BuildArtifacts" enabled="true">
+        <artifact name="SpectraWS:war" />
+      </option>
+    </method>
+  </configuration>
+</component>

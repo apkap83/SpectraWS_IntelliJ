@@ -1,5 +1,7 @@
 package gr.wind.spectra.business;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DateFormat;
@@ -12,17 +14,31 @@ import gr.wind.spectra.web.InvalidInputException;
 
 public class OpenningIncidentOutageToCSV
 {
-	private DB_Operations dbs;
-	private s_DB_Operations s_dbs;
+	private iDB_Operations dbOps;
+	private iStatic_DB_Operations s_dbOps;
 	private String incidentID;
 	private String outageID;
+	private final String windTableNamePrefix = "";
+	private final String novaTableNamePrefix = "Nova_";
+	private String exportFileDir;
+	private String tablePrefix;
 
-	public OpenningIncidentOutageToCSV(DB_Operations dbs, s_DB_Operations s_dbs, String incidentID, String outageID)
+	public OpenningIncidentOutageToCSV(iDB_Operations dbs, iStatic_DB_Operations s_dbs, String incidentID, String outageID)
 	{
-		this.dbs = dbs;
-		this.s_dbs = s_dbs;
+		this.dbOps = dbs;
+		this.s_dbOps = s_dbs;
 		this.incidentID = incidentID;
 		this.outageID = outageID;
+
+		// Check if Export is for Nova or Wind
+		if (dbOps.getClass().toString().equals("class gr.wind.spectra.business.DB_Operations")) {
+			this.exportFileDir = "/opt/ExportedFiles/AllOpenedOutages/";
+			this.tablePrefix = windTableNamePrefix;
+		} else if (dbOps.getClass().toString().equals("class gr.wind.spectra.business.TnovaDynamicDBOperations")) {
+			this.exportFileDir = "/opt/ExportedFiles/AllOpenedOutages/Nova_Env/";
+			this.tablePrefix = novaTableNamePrefix;
+			this.outageID = outageID.replace("Nova_","");
+		}
 	}
 
 	public String replaceHierarchyColumns(String hierarchyProvided, String technology)
@@ -40,7 +56,7 @@ public class OpenningIncidentOutageToCSV
 			String[] fullVoiceSubsHierarchyFromDBSplit;
 			// Get Full Voice hierarchy in style :
 			// OltElementName->OltSlot->OltPort->Onu->ActiveElement->Slot
-			fullVoiceSubsHierarchyFromDB = dbs.getOneValue("HierarchyTablePerTechnology2",
+			fullVoiceSubsHierarchyFromDB = dbOps.getOneValue(tablePrefix + "HierarchyTablePerTechnology2",
 					"VoiceSubscribersTableNamePath", new String[] { "RootHierarchyNode" },
 					new String[] { rootElementInHierarchy }, new String[] { "String" });
 
@@ -59,7 +75,7 @@ public class OpenningIncidentOutageToCSV
 			String[] fullVoiceSubsHierarchyFromDBSplit;
 			// Get Full Voice hierarchy in style :
 			// OltElementName->OltSlot->OltPort->Onu->ActiveElement->Slot
-			fullVoiceSubsHierarchyFromDB = dbs.getOneValue("HierarchyTablePerTechnology2",
+			fullVoiceSubsHierarchyFromDB = dbOps.getOneValue(tablePrefix + "HierarchyTablePerTechnology2",
 					"DataSubscribersTableNamePath", new String[] { "RootHierarchyNode" },
 					new String[] { rootElementInHierarchy }, new String[] { "String" });
 
@@ -78,7 +94,7 @@ public class OpenningIncidentOutageToCSV
 			String[] fullVoiceSubsHierarchyFromDBSplit;
 			// Get Full Voice hierarchy in style :
 			// OltElementName->OltSlot->OltPort->Onu->ActiveElement->Slot
-			fullVoiceSubsHierarchyFromDB = dbs.getOneValue("HierarchyTablePerTechnology2",
+			fullVoiceSubsHierarchyFromDB = dbOps.getOneValue(tablePrefix + "HierarchyTablePerTechnology2",
 					"IPTVSubscribersTableNamePath", new String[] { "RootHierarchyNode" },
 					new String[] { rootElementInHierarchy }, new String[] { "String" });
 
@@ -103,7 +119,7 @@ public class OpenningIncidentOutageToCSV
 
 		ResultSet rs = null;
 		// Get Lines with IncidentStatus = "OPEN"
-		rs = s_dbs.getRows("SubmittedIncidents",
+		rs = s_dbOps.getRows(tablePrefix + "SubmittedIncidents",
 				new String[] { "HierarchySelected", "StartTime", "EndTime", "Scheduled", "Impact", "AffectedServices",
 						"IncidentStatus", "IncidentID", "Scheduled", "Priority", "Locations" },
 				new String[] { "incidentID", "outageID" }, new String[] { incidentID, outageID },
@@ -140,15 +156,16 @@ public class OpenningIncidentOutageToCSV
 		String rootHierarchySelected = hf.getRootHierarchyNode(HierarchySelected);
 
 		// Secondly determine NGA_TYPE based on rootElement
-		String ngaTypes = dbs.getOneValue("HierarchyTablePerTechnology2", "NGA_TYPE",
+		String ngaTypes = dbOps.getOneValue(tablePrefix + "HierarchyTablePerTechnology2", "NGA_TYPE",
 				new String[] { "RootHierarchyNode" }, new String[] { rootHierarchySelected },
 				new String[] { "String" });
 
 		// If the closed incident is a "Data" affected one
 		if (outageAffectedService.equals("Data"))
 		{
-			String exportedFileName = "/opt/ExportedFiles/AllOpenedOutages/Spectra_CLIs_Affected_INC_" + incidentID
-					+ "_OutageID_" + outageID + "_Data_" + currentDate + ".csv";
+			Path exportedFileName = Paths.get(exportFileDir, "Spectra_CLIs_Affected_INC_" + incidentID + "_OutageID_" + outageID + "_Data_" + currentDate + ".csv");
+//			String exportedFileName = "/opt/ExportedFiles/AllOpenedOutages/Test_Env/Spectra_CLIs_Affected_INC_"
+//					+ incidentID + "_OutageID_" + outageID + "_Data_" + currentDate + ".csv";
 
 			HierarchySelected = this.replaceHierarchyColumns(HierarchySelected, "Data");
 
@@ -170,7 +187,7 @@ public class OpenningIncidentOutageToCSV
 				locations = "";
 			}
 
-			SQLStatementToCSV sCSV = new SQLStatementToCSV(exportedFileName, "Prov_Internet_Resource_Path",
+			SQLStatementToCSV sCSV = new SQLStatementToCSV(exportedFileName, tablePrefix + "Prov_Internet_Resource_Path",
 					new String[] { "CliValue", "'" + outageID + "'", "'OPEN'", "'" + incidentID + "'",
 							"'" + scheduled + "'", "'" + df.format(startTime) + "'", "'" + endTime + "'",
 							"'" + outageAffectedService + "'", "'" + impact + "'", "'" + priority + "'",
@@ -182,12 +199,12 @@ public class OpenningIncidentOutageToCSV
 		// If the closed incident is a "Voice" affected one
 		else if (outageAffectedService.equals("Voice"))
 		{
-			String exportedFileName = "/opt/ExportedFiles/AllOpenedOutages/Spectra_CLIs_Affected_INC_" + incidentID
-					+ "_OutageID_" + outageID + "_Voice_" + currentDate + ".csv";
+			Path exportedFileName = Paths.get(exportFileDir,"Spectra_CLIs_Affected_INC_"
+					+ incidentID + "_OutageID_" + outageID + "_Voice_" + currentDate + ".csv");
 
 			HierarchySelected = this.replaceHierarchyColumns(HierarchySelected, "Voice");
 
-			SQLStatementToCSV sCSV = new SQLStatementToCSV(exportedFileName, "Prov_Voice_Resource_Path",
+			SQLStatementToCSV sCSV = new SQLStatementToCSV(exportedFileName, tablePrefix + "Prov_Voice_Resource_Path",
 					new String[] { "CliValue", "'" + outageID + "'", "'OPEN'", "'" + incidentID + "'",
 							"'" + scheduled + "'", "'" + df.format(startTime) + "'", "'" + endTime + "'",
 							"'" + outageAffectedService + "'", "'" + impact + "'", "'" + priority + "'",
@@ -199,12 +216,12 @@ public class OpenningIncidentOutageToCSV
 		// If the closed incident is a "IPTV" affected one
 		else if (outageAffectedService.equals("IPTV"))
 		{
-			String exportedFileName = "/opt/ExportedFiles/AllOpenedOutages/Spectra_CLIs_Affected_INC_" + incidentID
-					+ "_OutageID_" + outageID + "_IPTV_" + currentDate + ".csv";
+			Path exportedFileName = Paths.get(exportFileDir,"Spectra_CLIs_Affected_INC_"
+					+ incidentID + "_OutageID_" + outageID + "_IPTV_" + currentDate + ".csv");
 
 			HierarchySelected = this.replaceHierarchyColumns(HierarchySelected, "IPTV");
 
-			SQLStatementToCSV sCSV = new SQLStatementToCSV(exportedFileName, "Prov_IPTV_Resource_Path",
+			SQLStatementToCSV sCSV = new SQLStatementToCSV(exportedFileName, tablePrefix + "Prov_IPTV_Resource_Path",
 					new String[] { "CliValue", "'" + outageID + "'", "'OPEN'", "'" + incidentID + "'",
 							"'" + scheduled + "'", "'" + df.format(startTime) + "'", "'" + endTime + "'",
 							"'" + outageAffectedService + "'", "'" + impact + "'", "'" + priority + "'",
@@ -214,8 +231,8 @@ public class OpenningIncidentOutageToCSV
 			sCSV.start();
 		}
 
-		dbs = null;
-		s_dbs = null;
+		dbOps = null;
+		s_dbOps= null;
 		incidentID = null;
 		outageID = null;
 	}

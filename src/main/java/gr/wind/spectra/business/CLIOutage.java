@@ -330,7 +330,7 @@ public class CLIOutage
 						}
 
 						// If the scheduled period (Start Time - End Time) has passed current local time then change the Incident status to "CLOSED"
-						/*  NOT TESTED YET
+						/*  NOT VERIFIED YET
 						if (now.isAfter(EndTimeInLocalDateTime))
 						{
 							int numOfRowsUpdated = s_dbs.updateColumnOnSpecificCriteria("SubmittedIncidents",

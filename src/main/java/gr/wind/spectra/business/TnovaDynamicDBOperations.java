@@ -1,40 +1,29 @@
 package gr.wind.spectra.business;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
-import java.text.ParseException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-//Import log4j classes.
+import gr.wind.spectra.web.InvalidInputException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import gr.wind.spectra.web.InvalidInputException;
+import java.sql.*;
+import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
-public class DB_Operations implements iDB_Operations {
+public class TnovaDynamicDBOperations implements iDB_Operations
+{
 	// Logger instance
-	Logger logger = LogManager.getLogger(gr.wind.spectra.business.DB_Operations.class.getName());
+	private final Logger logger = LogManager.getLogger(TnovaDynamicDBOperations.class.getName());
 
 	Connection conn;
 	Statement stmt = null;
 	ResultSet rs = null;
 
-	public DB_Operations(Connection conn)
+	public TnovaDynamicDBOperations(Connection conn)
 	{
 		this.conn = conn;
 	}
 
-	@Override
 	public boolean checkIfStringExistsInSpecificColumn(String table, String columnName, String searchValue)
 			throws SQLException
 	{
@@ -60,11 +49,11 @@ public class DB_Operations implements iDB_Operations {
 		return found;
 	}
 
-	@Override
 	public boolean insertValuesInTable(String table, String[] columnNames, String[] columnValues, String[] types)
 			throws SQLException, ParseException
 	{
 		Help_Func hf = new Help_Func();
+
 		boolean statusOfOperation = false;
 		String sqlString = "INSERT INTO " + table + hf.columnsToInsertStatement(columnNames)
 				+ hf.valuesToInsertStatement(columnValues);
@@ -112,7 +101,6 @@ public class DB_Operations implements iDB_Operations {
 		return statusOfOperation;
 	}
 
-	@Override
 	public int getMaxIntegerValue(String table, String columnName) throws SQLException
 	{
 		int returnValue = 0;
@@ -130,7 +118,6 @@ public class DB_Operations implements iDB_Operations {
 		return returnValue;
 	}
 
-	@Override
 	public Map<String, String> getCDRDB_Parameters(String table1, String table2, String[] columnNames, String cliValue)
 			throws SQLException
 	{
@@ -182,11 +169,11 @@ public class DB_Operations implements iDB_Operations {
 		return fields;
 	}
 
-	@Override
 	public boolean checkIfCriteriaExists(String table, String[] predicateKeys, String[] predicateValues,
-										 String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		boolean criteriaIfExists = false;
 
 		String sqlQuery = "SELECT COUNT(*) as Result FROM " + table + " WHERE "
@@ -217,9 +204,8 @@ public class DB_Operations implements iDB_Operations {
 		return criteriaIfExists;
 	}
 
-	@Override
 	public String getOneValue(String table, String columnName, String[] predicateKeys, String[] predicateValues,
-							  String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
 		String output;
@@ -247,17 +233,16 @@ public class DB_Operations implements iDB_Operations {
 		{
 			output = "";
 		}
-
 		rs.close();
 
 		return output;
 	}
 
-	@Override
 	public List<String> getOneColumnUniqueResultSet(String table, String columnName, String[] predicateKeys,
-													String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		// Example: select DISTINCT ID from table where a = 2 and b = 3
 		List<String> myList = new ArrayList<String>();
 
@@ -298,17 +283,17 @@ public class DB_Operations implements iDB_Operations {
 		}
 
 		// Sort list alphabetically
-		java.util.Collections.sort(myList);
+		Collections.sort(myList);
 
 		return myList;
 	}
 
-	@Override
 	public int updateValuesForOneColumn(String table, String setColumnName, String newValue, String[] predicateKeys,
-										String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
+		// Example: update Table set `Name` = 100 where Surname = "Kapetanios";
+
 		Help_Func hf = new Help_Func();
-		// Example: update TestTable set `Name` = 100 where Surname = "Kapetanios";
 
 		String sqlString = "update `" + table + "` set `" + setColumnName + "` = '" + newValue + "' WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -332,11 +317,11 @@ public class DB_Operations implements iDB_Operations {
 
 	}
 
-	@Override
 	public String numberOfRowsFound(String table, String[] predicateKeys, String[] predicateValues,
-									String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		int numOfRows = 0;
 		String sqlQuery = "SELECT *" + " FROM " + table + " WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -365,11 +350,11 @@ public class DB_Operations implements iDB_Operations {
 		return Integer.toString(numOfRows);
 	}
 
-	@Override
 	public String countDistinctRowsForSpecificColumn(String table, String column, String[] predicateKeys,
-													 String[] predicateValues, String[] predicateTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		String numOfRows = "";
 		String sqlQuery = "SELECT COUNT(DISTINCT(" + column + ")) as " + column + " FROM " + table + " WHERE "
 				+ hf.generateANDPredicateQuestionMarks(predicateKeys);
@@ -400,11 +385,18 @@ public class DB_Operations implements iDB_Operations {
 		return numOfRows;
 	}
 
-	@Override
+	/*
+	 * SELECT COUNT(*) FROM ( SELECT DISTINCT ActiveElement,Subrack,Slot,Port,PON
+	 * FROM Voice_Resource_Path WHERE SiteName = 'ACHARNAI' AND ActiveElement =
+	 * 'ATHOACHRNAGW01' AND Subrack = '2' AND Slot = '04' ) as AK;
+	 *
+	 */
+
 	public String countDistinctRowsForSpecificColumnsNGAIncluded(String table, String[] columns, String[] predicateKeys,
-																 String[] predicateValues, String[] predicateTypes, String ngaTypes) throws SQLException
+			String[] predicateValues, String[] predicateTypes, String ngaTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
+
 		String numOfRows = "";
 		String sqlQuery = "SELECT COUNT(*) AS Result FROM (SELECT DISTINCT ";
 
@@ -458,7 +450,6 @@ public class DB_Operations implements iDB_Operations {
 		return numOfRows;
 	}
 
-	@Override
 	public String determineWSAffected(String hierarchyGiven) throws SQLException
 	{
 		/*
@@ -472,23 +463,23 @@ public class DB_Operations implements iDB_Operations {
 		
 		if (hierarchyGiven.startsWith("Cabinet_Code"))
 		{
-		    b1 = true;
+			b1 = true;
 		}
 		if (hierarchyGiven.startsWith("Wind_FTTX"))
 		{
-		    b2 = true;
+			b2 = true;
 		}
 		if (hierarchyGiven.startsWith("FTTC_Location_Element"))
 		{
-		    b3 = true;
+			b3 = true;
 		}
 		
 		if (b1 || b2 || b3)
 		{
-		    output = "Yes";
+			output = "Yes";
 		} else
 		{
-		    output = "No";
+			output = "No";
 		}
 		
 		return output;
@@ -500,35 +491,80 @@ public class DB_Operations implements iDB_Operations {
 		String rootElementInHierarchy = hf.getRootHierarchyNode(hierarchyGiven);
 
 		// Based on root hierarchy get value of WsAffected column
-		String wsAffectedValue = getOneValue("HierarchyTablePerTechnology2", "WsAffected",
+		String wsAffectedValue = getOneValue("Nova_HierarchyTablePerTechnology2", "WsAffected",
 				new String[] { "RootHierarchyNode" }, new String[] { rootElementInHierarchy },
 				new String[] { "String" });
 
 		return wsAffectedValue;
 	}
 
-	@Override
-	public String countDistinctCLIsAffected(String[] distinctColumns, String[] predicateKeys, String[] predicateValues,
-											String[] predicateTypes, String ngaTypes, String serviceType, String voiceSubsTable, String dataSubsTable,
-											String IPTVSubsTable) throws SQLException
+	public String countDistinctRowsForSpecificColumns(String table, String[] columns, String[] predicateKeys,
+			String[] predicateValues, String[] predicateTypes) throws SQLException
 	{
-		/*      Example of Query that is implemented here
+		Help_Func hf = new Help_Func();
+
+		String numOfRows = "";
+		String sqlQuery = "SELECT COUNT(*) AS Result FROM(SELECT DISTINCT ";
+
+		for (int i = 0; i < columns.length; i++)
+		{
+			if (i < columns.length - 1)
+			{
+				sqlQuery += columns[i] + ",";
+			} else
+			{
+				sqlQuery += columns[i];
+			}
+		}
+
+		sqlQuery += " FROM " + table + " WHERE " + hf.generateANDPredicateQuestionMarks(predicateKeys) + ") as AK ";
+
+		logger.trace(sqlQuery);
+		PreparedStatement pst = conn.prepareStatement(sqlQuery);
+
+		for (int i = 0; i < predicateKeys.length; i++)
+		{
+			if (predicateTypes[i].equals("String"))
+			{
+				pst.setString(i + 1, predicateValues[i]);
+			} else if (predicateTypes[i].equals("Integer"))
+			{
+				pst.setInt(i + 1, Integer.parseInt(predicateValues[i]));
+			}
+		}
+
+		pst.execute();
+		ResultSet rs = pst.executeQuery();
+
+		while (rs.next())
+		{
+			numOfRows = rs.getString("Result");
+		}
+		return numOfRows;
+	}
+
+	public String countDistinctCLIsAffected(String[] distinctColumns, String[] predicateKeys, String[] predicateValues,
+			String[] predicateTypes, String ngaTypes, String serviceType, String voiceSubsTable, String dataSubsTable,
+			String IPTVSubsTable) throws SQLException
+	{
+		/*	Example of Query that is implemented here
 		 *
-		    SELECT COUNT(DISTINCT PASPORT_COID) AS Result FROM
-		    (
-		            SELECT DISTINCT (PASPORT_COID) from Prov_Voice_Resource_Path WHERE `OltElementName` = ? AND `OltRackNo` = ? AND `NGA_TYPE` IN ('WIND_FTTH','WIND_FTTC')
-
-		        UNION ALL
-
-		        SELECT DISTINCT (PASPORT_COID) from Prov_Internet_Resource_Path WHERE `OltElementName` = ? AND `OltRackNo` = ? AND `NGA_TYPE` IN ('WIND_FTTH','WIND_FTTC')
-
-		        UNION ALL
-
-		        SELECT DISTINCT (PASPORT_COID) from Prov_IPTV_Resource_Path WHERE `OltElementName` = ? AND `OltRackNo` = ? AND `NGA_TYPE` IN ('WIND_FTTH','WIND_FTTC')
-
-		    ) as AK;
-
+			SELECT COUNT(DISTINCT PASPORT_COID) AS Result FROM
+			(
+				SELECT DISTINCT (PASPORT_COID) from Prov_Voice_Resource_Path WHERE `OltElementName` = ? AND `OltRackNo` = ? AND `NGA_TYPE` IN ('WIND_FTTH','WIND_FTTC')
+		
+			    UNION ALL
+		
+			    SELECT DISTINCT (PASPORT_COID) from Prov_Internet_Resource_Path WHERE `OltElementName` = ? AND `OltRackNo` = ? AND `NGA_TYPE` IN ('WIND_FTTH','WIND_FTTC')
+		
+			    UNION ALL
+		
+			    SELECT DISTINCT (PASPORT_COID) from Prov_IPTV_Resource_Path WHERE `OltElementName` = ? AND `OltRackNo` = ? AND `NGA_TYPE` IN ('WIND_FTTH','WIND_FTTC')
+		
+			) as AK;
+		
 		 */
+
 		Help_Func hf = new Help_Func();
 
 		if (serviceType.equals("NotSpecificService"))
@@ -568,6 +604,8 @@ public class DB_Operations implements iDB_Operations {
 
 			totalQuery += sqlQueryForVoice + " UNION ALL " + sqlQueryForData + " UNION ALL " + sqlQueryForIPTV
 					+ ") as AK";
+
+			// System.out.println("544: SqlQuery: " + totalQuery);
 			logger.trace(totalQuery);
 			PreparedStatement pst = conn.prepareStatement(totalQuery);
 
@@ -675,7 +713,7 @@ public class DB_Operations implements iDB_Operations {
 				totalQuery += sqlQueryForIPTV + " UNION ALL ";
 			}
 
-			//totalQuery += sqlQueryForVoice + " UNION ALL " + sqlQueryForData + " UNION ALL " + sqlQueryForIPTV + ") as AK";
+			// totalQuery += sqlQueryForVoice + " UNION ALL " + sqlQueryForData + " UNION ALL " + sqlQueryForIPTV;
 
 			// Remove last " UNION ALL "
 			totalQuery = totalQuery.substring(0, totalQuery.length() - 11);
@@ -684,6 +722,7 @@ public class DB_Operations implements iDB_Operations {
 			totalQuery += ") as AK";
 
 			logger.trace(totalQuery);
+			// System.out.println("544: SqlQuery: " + totalQuery);
 			PreparedStatement pst = conn.prepareStatement(totalQuery);
 
 			// X Queries iterations x number of predicates
@@ -726,55 +765,8 @@ public class DB_Operations implements iDB_Operations {
 
 	}
 
-	@Override
-	public String countDistinctRowsForSpecificColumns(String table, String[] columns, String[] predicateKeys,
-													  String[] predicateValues, String[] predicateTypes) throws SQLException
-	{
-		Help_Func hf = new Help_Func();
-
-		String numOfRows = "";
-		String sqlQuery = "SELECT COUNT(*) AS Result FROM(SELECT DISTINCT ";
-
-		for (int i = 0; i < columns.length; i++)
-		{
-			if (i < columns.length - 1)
-			{
-				sqlQuery += columns[i] + ",";
-			} else
-			{
-				sqlQuery += columns[i];
-			}
-		}
-
-		sqlQuery += " FROM " + table + " WHERE " + hf.generateANDPredicateQuestionMarks(predicateKeys) + ") as AK ";
-
-		logger.trace(sqlQuery);
-		PreparedStatement pst = conn.prepareStatement(sqlQuery);
-
-		for (int i = 0; i < predicateKeys.length; i++)
-		{
-			if (predicateTypes[i].equals("String"))
-			{
-				pst.setString(i + 1, predicateValues[i]);
-			} else if (predicateTypes[i].equals("Integer"))
-			{
-				pst.setInt(i + 1, Integer.parseInt(predicateValues[i]));
-			}
-		}
-
-		pst.execute();
-		ResultSet rs = pst.executeQuery();
-
-		while (rs.next())
-		{
-			numOfRows = rs.getString("Result");
-		}
-		return numOfRows;
-	}
-
-	@Override
 	public ResultSet getRows(String table, String[] columnNames, String[] predicateKeys, String[] predicateValues,
-							 String[] predicateTypes) throws SQLException
+			String[] predicateTypes) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
 
@@ -800,7 +792,6 @@ public class DB_Operations implements iDB_Operations {
 		return rs;
 	}
 
-	@Override
 	public boolean authenticateRequest(String userName, String password) throws SQLException
 	{
 		boolean found = false;
@@ -829,7 +820,6 @@ public class DB_Operations implements iDB_Operations {
 				 * bytes and it's purpose is that if two different people choose the same
 				 * password, the stored passwords will still look different.
 				 */
-
 				Password psw = new Password();
 				passwordIsCorrect = psw.check(password, r_password);
 
@@ -849,9 +839,8 @@ public class DB_Operations implements iDB_Operations {
 		return found;
 	}
 
-	@Override
 	public String maxNumberOfCustomersAffected(String table, String SumOfColumn, String[] predicateColumns,
-											   String[] predicateValues) throws SQLException
+			String[] predicateValues) throws SQLException
 	{
 		Help_Func hf = new Help_Func();
 
@@ -876,10 +865,9 @@ public class DB_Operations implements iDB_Operations {
 		return numOfRows;
 	}
 
-	@Override
 	public int updateColumnOnSpecificCriteria(String tableName, String[] columnNamesForUpdate,
-											  String[] columnValuesForUpdate, String[] setColumnDataTypes, String[] predicateColumns,
-											  String[] predicateValues, String[] predicateColumnsDataTypes) throws SQLException, InvalidInputException
+			String[] columnValuesForUpdate, String[] setColumnDataTypes, String[] predicateColumns,
+			String[] predicateValues, String[] predicateColumnsDataTypes) throws SQLException, InvalidInputException
 	{
 		Help_Func hf = new Help_Func();
 
