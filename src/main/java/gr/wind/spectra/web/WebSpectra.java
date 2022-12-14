@@ -209,9 +209,6 @@ public class WebSpectra implements InterfaceWebSpectra
 				// Update Statistics for Wind
 				s_dbs.updateUsageStatisticsForMethod("GetHierarchy");
 
-				// Update Statistics for Nova
-				novaStaticDBOper.updateUsageStatisticsForMethod("GetHierarchy");
-
 				ElementsList = dbs.getOneColumnUniqueResultSet(DBTable.HierarchyTablePerTechnology2.toString(), "RootHierarchyNode",
 						new String[] {}, new String[] {}, new String[] {});
 
@@ -219,6 +216,9 @@ public class WebSpectra implements InterfaceWebSpectra
 				if (novaDynCon != null) {
 					NovaElementsList = novaDynDBOper.getOneColumnUniqueResultSet(novaTableNamePrefix + DBTable.HierarchyTablePerTechnology2.toString(), "RootHierarchyNode",
 							new String[]{}, new String[]{}, new String[]{});
+
+					// Update Statistics for Nova
+					novaStaticDBOper.updateUsageStatisticsForMethod("GetHierarchy");
 				}
 				// TODO: Activate When Nova will be LIVE - Add in the list for WIND root elements the list for Nova Elements in the same array
 				// ElementsList.addAll(NovaElementsList);
