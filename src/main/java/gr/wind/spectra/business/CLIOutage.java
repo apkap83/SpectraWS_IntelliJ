@@ -30,10 +30,15 @@ import gr.wind.spectra.web.InvalidInputException;
 
 public class CLIOutage
 {
-	private DB_Operations dbs;
-	private s_DB_Operations s_dbs;
+	private iDB_Operations dbs;
+	private iStatic_DB_Operations s_dbs;
 	private String requestID;
 	private String systemID;
+
+	private String FoundForCompany;
+	private String tablePrefix;
+	private final String windTableNamePrefix = "";
+	private final String novaTableNamePrefix = "Nova_";
 
 	Help_Func hf = new Help_Func();
 
@@ -42,12 +47,20 @@ public class CLIOutage
 	// Logger instance
 	Logger logger = LogManager.getLogger(gr.wind.spectra.business.CLIOutage.class.getName());
 
-	public CLIOutage(DB_Operations dbs, s_DB_Operations s_dbs, String requestID, String systemID) throws Exception
+	public CLIOutage(iDB_Operations dbs, iStatic_DB_Operations s_dbs, String requestID, String systemID, String FoundForCompany) throws Exception
 	{
 		this.dbs = dbs;
 		this.s_dbs = s_dbs;
 		this.requestID = requestID;
 		this.systemID = systemID;
+		this.FoundForCompany = FoundForCompany;
+
+		// Check if Export is for Nova or Wind
+		if (dbs.getClass().toString().equals("class gr.wind.spectra.business.DB_Operations")) {
+			this.tablePrefix = windTableNamePrefix;
+		} else if (dbs.getClass().toString().equals("class gr.wind.spectra.business.TnovaDynamicDBOperations")) {
+			this.tablePrefix = novaTableNamePrefix;
+		}
 	}
 
 	public String replaceHierarchyColumns(String hierarchyProvided, String technology)
@@ -66,7 +79,7 @@ public class CLIOutage
 			String[] fullVoiceSubsHierarchyFromDBSplit;
 			// Get Full Voice hierarchy in style :
 			// OltElementName->OltSlot->OltPort->Onu->ActiveElement->Slot
-			fullVoiceSubsHierarchyFromDB = dbs.getOneValue("HierarchyTablePerTechnology2",
+			fullVoiceSubsHierarchyFromDB = dbs.getOneValue(tablePrefix + "HierarchyTablePerTechnology2",
 					"VoiceSubscribersTableNamePath", new String[] { "RootHierarchyNode" },
 					new String[] { rootElementInHierarchy }, new String[] { "String" });
 
@@ -85,7 +98,7 @@ public class CLIOutage
 			String[] fullVoiceSubsHierarchyFromDBSplit;
 			// Get Full Voice hierarchy in style :
 			// OltElementName->OltSlot->OltPort->Onu->ActiveElement->Slot
-			fullVoiceSubsHierarchyFromDB = dbs.getOneValue("HierarchyTablePerTechnology2",
+			fullVoiceSubsHierarchyFromDB = dbs.getOneValue(tablePrefix + "HierarchyTablePerTechnology2",
 					"DataSubscribersTableNamePath", new String[] { "RootHierarchyNode" },
 					new String[] { rootElementInHierarchy }, new String[] { "String" });
 
@@ -104,7 +117,7 @@ public class CLIOutage
 			String[] fullVoiceSubsHierarchyFromDBSplit;
 			// Get Full Voice hierarchy in style :
 			// OltElementName->OltSlot->OltPort->Onu->ActiveElement->Slot
-			fullVoiceSubsHierarchyFromDB = dbs.getOneValue("HierarchyTablePerTechnology2",
+			fullVoiceSubsHierarchyFromDB = dbs.getOneValue(tablePrefix + "HierarchyTablePerTechnology2",
 					"IPTVSubscribersTableNamePath", new String[] { "RootHierarchyNode" },
 					new String[] { rootElementInHierarchy }, new String[] { "String" });
 
@@ -126,7 +139,7 @@ public class CLIOutage
 		// Check if CLI is affected by AdHoc Outage
 		// Get Lines with CliValue = CLIProvided
 		ResultSet myRS = null;
-		myRS = s_dbs.getRows("AdHocOutage_CLIS",
+		myRS = s_dbs.getRows(tablePrefix + "AdHocOutage_CLIS",
 				new String[] { "CliValue", "Start_DateTime", "End_DateTime", "BackupEligible", "Message" },
 				new String[] { "CliValue" }, new String[] { CLIProvided }, new String[] { "String" });
 
@@ -229,11 +242,11 @@ public class CLIOutage
 		}
 
 		// Check if we have at least one OPEN incident
-		boolean weHaveOpenIncident = s_dbs.checkIfStringExistsInSpecificColumn("SubmittedIncidents", "IncidentStatus",
+		boolean weHaveOpenIncident = s_dbs.checkIfStringExistsInSpecificColumn(tablePrefix + "SubmittedIncidents", "IncidentStatus",
 				"OPEN");
 
 		// Check number of open incidents
-		String numOfOpenIncidentsCurrently = s_dbs.numberOfRowsFound("SubmittedIncidents",
+		String numOfOpenIncidentsCurrently = s_dbs.numberOfRowsFound(tablePrefix + "SubmittedIncidents",
 				new String[] { "IncidentStatus" }, new String[] { "OPEN" }, new String[] { "String" });
 
 		// If the submitted service type is empty then fill it with "Voice|Data"
@@ -242,8 +255,16 @@ public class CLIOutage
 			ServiceType = "Voice|Data|IPTV";
 		}
 
-		logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
-				+ ServiceType);
+		if (FoundForCompany.equals("FOUND_FOR_WIND")) {
+			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
+					+ ServiceType + " (Found in Wind DB)");
+		} else if (FoundForCompany.equals("FOUND_FOR_NOVA")) {
+			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
+					+ ServiceType + " (Found in Nova DB)");
+		} else if (FoundForCompany.equals("NOT_FOUND_FOR_WIND_OR_NOVA")) {
+			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
+					+ ServiceType + " (Not Found in DBs)");
+		}
 
 		// Split ServiceType
 		String delimiterCharacter = "\\|";
@@ -275,7 +296,7 @@ public class CLIOutage
 			{
 				ResultSet rs = null;
 				// Get Lines with IncidentStatus = "OPEN"
-				rs = s_dbs.getRows("SubmittedIncidents",
+				rs = s_dbs.getRows(tablePrefix + "SubmittedIncidents",
 						new String[] { "WillBePublished", "IncidentID", "OutageID", "BackupEligible",
 								"HierarchySelected", "Priority", "AffectedServices", "Scheduled", "Duration",
 								"StartTime", "EndTime", "Impact", "OutageMsg" },
@@ -362,7 +383,7 @@ public class CLIOutage
 						String rootElementInHierarchy = hf.getRootHierarchyNode(HierarchySelected);
 
 						// Get Hierarchy Table for that root hierarchy
-						String table = dbs.getOneValue("HierarchyTablePerTechnology2", "VoiceSubscribersTableName",
+						String table = dbs.getOneValue(tablePrefix + "HierarchyTablePerTechnology2", "VoiceSubscribersTableName",
 								new String[] { "RootHierarchyNode" }, new String[] { rootElementInHierarchy },
 								new String[] { "String" });
 
@@ -431,7 +452,7 @@ public class CLIOutage
 						String rootElementInHierarchy = hf.getRootHierarchyNode(HierarchySelected);
 
 						// Get Hierarchy Table for that root hierarchy
-						String table = dbs.getOneValue("HierarchyTablePerTechnology2", "DataSubscribersTableName",
+						String table = dbs.getOneValue(tablePrefix + "HierarchyTablePerTechnology2", "DataSubscribersTableName",
 								new String[] { "RootHierarchyNode" }, new String[] { rootElementInHierarchy },
 								new String[] { "String" });
 
@@ -497,7 +518,7 @@ public class CLIOutage
 						String rootElementInHierarchy = hf.getRootHierarchyNode(HierarchySelected);
 
 						// Get Hierarchy Table for that root hierarchy
-						String table = dbs.getOneValue("HierarchyTablePerTechnology2", "IPTVSubscribersTableName",
+						String table = dbs.getOneValue(tablePrefix + "HierarchyTablePerTechnology2", "IPTVSubscribersTableName",
 								new String[] { "RootHierarchyNode" }, new String[] { rootElementInHierarchy },
 								new String[] { "String" });
 
@@ -583,7 +604,7 @@ public class CLIOutage
 				gr.wind.spectra.cdrdbconsumer.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 				HasOutage ho = new HasOutage();
-				Map<String, String> fields = dbs.getCDRDB_Parameters("Prov_Internet_Resource_Path", "AAA21_NMAP",
+				Map<String, String> fields = dbs.getCDRDB_Parameters(tablePrefix + "Prov_Internet_Resource_Path", "AAA21_NMAP",
 						new String[] { "A.CliValue", "A.Username",
 								"B.Active_Element as \"AAA DLSAM Name\", A.ActiveElement as \"WindOwnedElement\"",
 								" A.PASPORT_COID" },
@@ -625,7 +646,7 @@ public class CLIOutage
 						String ActualServicesAffected = "Data|IPTV";
 
 						// Check if Customer has VOIP Telephony - Addition 24 Jan 2022
-						String ActualUserServiceType = dbs.getOneValue("Prov_Voice_Resource_Path", "ServiceType",
+						String ActualUserServiceType = dbs.getOneValue(tablePrefix + "Prov_Voice_Resource_Path", "ServiceType",
 								new String[] { "CliValue" }, new String[] { CLIProvided }, new String[] { "String" });
 
 						if (ActualUserServiceType.equals("SIP_VOIP"))
@@ -799,7 +820,7 @@ public class CLIOutage
 			gr.wind.spectra.cdrdbconsumer.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 			HasOutage ho = new HasOutage();
-			Map<String, String> fields = dbs.getCDRDB_Parameters("Prov_Internet_Resource_Path", "AAA21_NMAP",
+			Map<String, String> fields = dbs.getCDRDB_Parameters(tablePrefix + "Prov_Internet_Resource_Path", tablePrefix + "AAA21_NMAP",
 					new String[] { "A.CliValue", "A.Username", "B.Active_Element as \"AAA DLSAM Name\"",
 							"A.ActiveElement as \"WindOwnedElement\"", " A.PASPORT_COID" },
 
@@ -841,10 +862,10 @@ public class CLIOutage
 					String ActualServicesAffected = "Data|IPTV";
 
 					// Check if Customer has VOIP Telephony - Addition 24 Jan 2022
-					String ActualUserServiceType = dbs.getOneValue("Prov_Voice_Resource_Path", "ServiceType",
+					String ActualUserServiceType = dbs.getOneValue(tablePrefix + "Prov_Voice_Resource_Path", "ServiceType",
 							new String[] { "CliValue" }, new String[] { CLIProvided }, new String[] { "String" });
 
-					if (ActualUserServiceType.equals("SIP_VOIP"))
+					if (ActualUserServiceType.equals("SIP_VOIP") || ActualUserServiceType.equals("SIP"))
 					{
 						ActualServicesAffected = "Voice|Data|IPTV";
 					}

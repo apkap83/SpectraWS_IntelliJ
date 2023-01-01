@@ -2083,6 +2083,7 @@ public class WebSpectra implements InterfaceWebSpectra
 										 @WebParam(name = "ServiceL3") @XmlElement(required = false) String ServiceL3)
 			throws Exception, InvalidInputException
 	{
+		Boolean subscriberFoundForWind = false;
 		Logger logger = LogManager.getLogger(gr.wind.spectra.web.WebSpectra.class.getName());
 		Connection conn = null;
 		DB_Connection conObj = null;
@@ -2092,8 +2093,16 @@ public class WebSpectra implements InterfaceWebSpectra
 		s_DB_Operations s_dbs = null;
 		MessageContext mc = null;
 		HttpServletRequest req = null;
-		//System.out.println("Client IP = " + req.getRemoteAddr());
-		//System.out.println("Client IP = " + req.getRemoteAddr());
+
+		// Addition for Nova Connection towards Static Database
+		Connection novaStaticCon = null;
+		TnovaStaticDBConnection novaStaticConObj = null;
+		TnovaStaticDBOperations novaStaticDBOper = null;
+
+		// Addition for Nova Connection towards Dynamic Database
+		Connection novaDynCon = null;
+		TnovaDynamicDBConnection novaDynConObj = null;
+		TnovaDynamicDBOperations novaDynDBOper = null;
 
 		if (conn == null)
 		{
@@ -2123,7 +2132,53 @@ public class WebSpectra implements InterfaceWebSpectra
 			}
 		}
 
-		new WebSpectra();
+		if (novaStaticCon == null)
+		{
+			try
+			{
+				novaStaticConObj = new TnovaStaticDBConnection();
+				novaStaticCon = novaStaticConObj.connect();
+				if (novaStaticConObj != null) {
+					novaStaticDBOper = new TnovaStaticDBOperations(novaStaticCon);
+				} else {
+					// Try to reconnect to data source...
+					new TnovaStaticDataSource();
+				}
+			} catch (Exception ex)
+			{
+				// Try to reconnect to data source...
+				new TnovaStaticDataSource();
+
+				logger.fatal("Could not open connection with Nova Static database!");
+				throw new Exception(ex.getMessage());
+			}
+		}
+
+		if (novaDynCon == null)
+		{
+			try
+			{
+				novaDynConObj = new TnovaDynamicDBConnection();
+				novaDynCon = novaDynConObj.connect();
+				if (novaDynConObj != null) {
+					novaDynDBOper = new TnovaDynamicDBOperations(novaDynCon);
+				} else {
+					// Try to reconnect to data source...
+					new TnovaDynamicDataSource();
+				}
+			} catch (Exception ex)
+			{
+				// Try to reconnect to data source...
+				new TnovaDynamicDataSource();
+
+				logger.fatal("Could not open connection with database!");
+				throw new Exception(ex.getMessage());
+			}
+		}
+
+		// Interface for DB Operations (used either for WIND or Nova)
+		iDB_Operations dbOps = null;
+		iStatic_DB_Operations s_dbOps = null;
 		ProductOfNLUActive ponla = null;
 		try
 		{
@@ -2163,24 +2218,67 @@ public class WebSpectra implements InterfaceWebSpectra
 				hf.validateDelimitedValues("Service", Service, "\\|", new String[] { "Voice", "Data", "IPTV" });
 			}
 
-			CLIOutage co = new CLIOutage(dbs, s_dbs, RequestID, SystemID);
-			ponla = co.checkCLIOutage(RequestID, CLI, Service);
+			// Check if CliValue is found in WIND or Nova Databases (Table Cli_Mappings that exists in both DBs)
+
+			// Search if it is WIND subscriber
+			if (dbs != null && s_dbs != null) {
+
+				try {
+					boolean foundInWind = dbs.checkIfStringExistsInSpecificColumn("Cli_Mappings",
+							"CliValue", CLI);
+
+					// WIND Subscriber
+					if (foundInWind) {
+						subscriberFoundForWind = true;
+						CLIOutage co = new CLIOutage(dbs, s_dbs, RequestID, SystemID, "FOUND_FOR_WIND");
+						ponla = co.checkCLIOutage(RequestID, CLI, Service);
+					}
+				}
+				catch (Exception e) {
+					logger.error("NLU_Active: Problem while retrieving data from Wind DB !");
+					e.printStackTrace();
+				}
+			}
+
+			// Search if it is Nova subscriber
+			if (novaDynDBOper != null  && novaStaticDBOper != null && subscriberFoundForWind == false) {
+				try {
+					boolean foundInNova = novaDynDBOper.checkIfStringExistsInSpecificColumn("Nova_Cli_Mappings",
+							"CliValue", CLI);
+					if (foundInNova) { // NOVA Subscriber
+						CLIOutage co = new CLIOutage(novaDynDBOper, novaStaticDBOper, RequestID, SystemID, "FOUND_FOR_NOVA");
+						ponla = co.checkCLIOutage(RequestID, CLI, Service);
+					} else {
+
+						// Cli Not Found then Assume WIND operations
+						if (dbs != null && s_dbs != null) {
+							subscriberFoundForWind = true; // Assume Wind for Reporting server request
+							CLIOutage co = new CLIOutage(dbs, s_dbs, RequestID, SystemID, "NOT_FOUND_FOR_WIND_OR_NOVA");
+							ponla = co.checkCLIOutage(RequestID, CLI, Service);
+						}
+
+					}
+				}
+				catch (Exception e) {
+					logger.error("NLU_Active: Problem while retrieving data from Nova DB !");
+					e.printStackTrace();
+				}
+			}
 
 		} catch (Exception e)
 		{
 			throw e;
-		} finally
-		{
-			// Send Similar request to Spectra_Reporting server
-			try
-			{
-				Async_NLUActive nluA = new Async_NLUActive(UserName, Password, RequestID, RequestTimestamp, SystemID,
-						CLI, Service, ServiceL2, ServiceL3);
-				nluA.run();
-			} catch (Exception e)
-			{
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		} finally {
+			// Send Similar request to Spectra_Reporting server ONLY for WIND requests
+			if (subscriberFoundForWind) {
+				try {
+					Async_NLUActive nluA = new Async_NLUActive(UserName, Password, RequestID, RequestTimestamp, SystemID,
+							CLI, Service, ServiceL2, ServiceL3);
+					nluA.run();
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 
 			try
@@ -2195,12 +2293,30 @@ public class WebSpectra implements InterfaceWebSpectra
 					s_conObj.closeDBConnection();
 				}
 
+				if (novaStaticConObj != null)
+				{
+					novaStaticConObj.closeDBConnection();
+				}
+
+				if (novaDynConObj != null)
+				{
+					novaDynConObj.closeDBConnection();
+				}
+
+				// Close connections regarding WIND DB
 				conn = null;
 				conObj = null;
 				dbs = null;
 				s_conn = null;
 				s_conObj = null;
 				s_dbs = null;
+
+				// Close connections regarding Nova DB
+				novaStaticCon=null;
+				novaDynCon=null;
+				novaStaticDBOper=null;
+				novaDynDBOper=null;
+
 				mc = null;
 				req = null;
 
