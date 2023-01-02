@@ -10,14 +10,18 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import gr.wind.spectra.cdrdbconsumer.InsertCallerData;
-import gr.wind.spectra.cdrdbconsumer.WebCDRDBService;
+//import gr.wind.spectra.cdrdbconsumer.InsertCallerData;
+//import gr.wind.spectra.cdrdbconsumer.WebCDRDBService;
+
+import gr.wind.spectra.cdrdbconsumernova.InsertCallerData;
+import gr.wind.spectra.cdrdbconsumernova.WebCDRDBService;
 
 public class Update_CallerDataTable extends Thread
 {
 	iDB_Operations dbs;
 	iStatic_DB_Operations s_dbs;
 	String CLIProvided;
+	String Company;
 	String IncidentID;
 	String allAffectedServices;
 	String foundScheduled;
@@ -25,13 +29,14 @@ public class Update_CallerDataTable extends Thread
 	String backupEligible;
 	String requestID;
 	String systemID;
+
 	private String tablePrefix;
 	private final String windTableNamePrefix = "";
 	private final String novaTableNamePrefix = "Nova_";
 
 	public Update_CallerDataTable(iDB_Operations dbs, iStatic_DB_Operations s_dbs, String CLIProvided, String IncidentID,
 			String allAffectedServices, String foundScheduled, String message, String backupEligible, String requestID,
-			String systemID)
+			String systemID, String Company)
 	{
 		this.dbs = dbs;
 		this.s_dbs = s_dbs;
@@ -43,6 +48,7 @@ public class Update_CallerDataTable extends Thread
 		this.backupEligible = backupEligible;
 		this.requestID = requestID;
 		this.systemID = systemID;
+		this.Company = Company;
 
 		// Check if Export is for Nova or Wind
 		if (dbs.getClass().toString().equals("class gr.wind.spectra.business.DB_Operations")) {
@@ -356,11 +362,12 @@ public class Update_CallerDataTable extends Thread
 				try
 				{
 					WebCDRDBService myWebService = new WebCDRDBService();
-					gr.wind.spectra.cdrdbconsumer.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
+					gr.wind.spectra.cdrdbconsumernova.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 					InsertCallerData icd = new InsertCallerData();
 
 					icd.setRequestID(requestID);
+					icd.setCompany(Company);
 					icd.setUsername(Username);
 					icd.setCli(CLIProvided);
 					icd.setIncidentNumber(IncidentID);
@@ -429,7 +436,7 @@ public class Update_CallerDataTable extends Thread
 				try
 				{
 					WebCDRDBService myWebService = new WebCDRDBService();
-					gr.wind.spectra.cdrdbconsumer.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
+					gr.wind.spectra.cdrdbconsumernova.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 					InsertCallerData icd = new InsertCallerData();
 

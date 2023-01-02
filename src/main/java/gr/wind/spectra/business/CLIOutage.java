@@ -23,8 +23,12 @@ import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import gr.wind.spectra.cdrdbconsumer.HasOutage;
-import gr.wind.spectra.cdrdbconsumer.WebCDRDBService;
+//import gr.wind.spectra.cdrdbconsumer.HasOutage;
+//import gr.wind.spectra.cdrdbconsumer.WebCDRDBService;
+
+import gr.wind.spectra.cdrdbconsumernova.HasOutage;
+import gr.wind.spectra.cdrdbconsumernova.WebCDRDBService;
+
 import gr.wind.spectra.model.ProductOfNLUActive;
 import gr.wind.spectra.web.InvalidInputException;
 
@@ -131,7 +135,7 @@ public class CLIOutage
 		return newHierarchyValue;
 	}
 
-	public ProductOfNLUActive checkAdHocOutage(String RequestID, String CLIProvided) throws SQLException, ParseException
+	public ProductOfNLUActive checkAdHocOutage(String RequestID, String CLIProvided, String Company) throws SQLException, ParseException
 	{
 		ProductOfNLUActive ponla = new ProductOfNLUActive();
 		Help_Func hf = new Help_Func();
@@ -200,7 +204,7 @@ public class CLIOutage
 
 				// Update asynchronously - Add Caller to Caller data table (Caller_Data) with empty values for IncidentID, Affected Services & Scheduling
 				Update_CallerDataTable ucdt = new Update_CallerDataTable(dbs, s_dbs, CLIProvided, "AdHoc_Outage",
-						"Voice|Data|IPTV", "Yes", adHocMessage, BackupEligible, RequestID, systemID);
+						"Voice|Data|IPTV", "Yes", adHocMessage, BackupEligible, RequestID, systemID, Company);
 				ucdt.run();
 
 				// Update asynchronously Stats_Pos_NLU_Requests to count number of successful NLU requests per CLI
@@ -224,6 +228,8 @@ public class CLIOutage
 	public ProductOfNLUActive checkCLIOutage(String RequestID, String CLIProvided, String ServiceType)
 			throws SQLException, InvalidInputException, ParseException
 	{
+		String Company = "UNKNOWN";
+
 		ProductOfNLUActive ponla = new ProductOfNLUActive();
 		boolean foundAtLeastOneCLIAffected = false;
 		boolean voiceAffected = false;
@@ -234,8 +240,22 @@ public class CLIOutage
 
 		Help_Func hf = new Help_Func();
 
+
+		if (FoundForCompany.equals("FOUND_FOR_WIND")) {
+			Company = "WIND";
+			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
+					+ ServiceType + " (Found in Wind DB)");
+		} else if (FoundForCompany.equals("FOUND_FOR_NOVA")) {
+			Company = "NOVA";
+			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
+					+ ServiceType + " (Found in Nova DB)");
+		} else if (FoundForCompany.equals("NOT_FOUND_FOR_WIND_OR_NOVA")) {
+			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
+					+ ServiceType + " (Not Found in DBs)");
+		}
+
 		// Check if we have Ad-Hoc Outage from Table: AdHocOutage_CLIS
-		ProductOfNLUActive ponla_AdHoc = checkAdHocOutage(RequestID, CLIProvided);
+		ProductOfNLUActive ponla_AdHoc = checkAdHocOutage(RequestID, CLIProvided, Company);
 		if (ponla_AdHoc != null)
 		{
 			return ponla_AdHoc;
@@ -253,17 +273,6 @@ public class CLIOutage
 		if (hf.checkIfEmpty("ServiceType", ServiceType))
 		{
 			ServiceType = "Voice|Data|IPTV";
-		}
-
-		if (FoundForCompany.equals("FOUND_FOR_WIND")) {
-			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
-					+ ServiceType + " (Found in Wind DB)");
-		} else if (FoundForCompany.equals("FOUND_FOR_NOVA")) {
-			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
-					+ ServiceType + " (Found in Nova DB)");
-		} else if (FoundForCompany.equals("NOT_FOUND_FOR_WIND_OR_NOVA")) {
-			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - Checking CLI Outage CLI: " + CLIProvided + " | "
-					+ ServiceType + " (Not Found in DBs)");
 		}
 
 		// Split ServiceType
@@ -591,7 +600,7 @@ public class CLIOutage
 
 				// Update asynchronously - Add Caller to Caller data table (Caller_Data) with empty values for IncidentID, Affected Services & Scheduling
 				Update_CallerDataTable ucdt = new Update_CallerDataTable(dbs, s_dbs, CLIProvided, "", "", "", "", "",
-						RequestID, systemID);
+						RequestID, systemID, Company);
 				ucdt.run();
 
 				ponla = new ProductOfNLUActive(this.requestID, CLIProvided, "No", "none", "none", "none", "none",
@@ -601,7 +610,7 @@ public class CLIOutage
 				// Send request and ask CDR DB for Outage
 				// **************************************
 				WebCDRDBService myWebService = new WebCDRDBService();
-				gr.wind.spectra.cdrdbconsumer.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
+				gr.wind.spectra.cdrdbconsumernova.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 				HasOutage ho = new HasOutage();
 				Map<String, String> fields = dbs.getCDRDB_Parameters(tablePrefix + "Prov_Internet_Resource_Path", "AAA21_NMAP",
@@ -612,6 +621,7 @@ public class CLIOutage
 
 				ho.setAAAUsername(fields.get("Username"));
 				ho.setRequestID(RequestID);
+				ho.setCompany(Company);
 				ho.setCli(CLIProvided);
 
 				// Check if AAA DSLAM exist, if not pick up WindOwnedElement
@@ -636,7 +646,7 @@ public class CLIOutage
 				try
 				{
 					String specificOutageMessage = "msg1";
-					gr.wind.spectra.cdrdbconsumer.HasOutageResponse hor = iws.hasOutage(ho, "spectra",
+					gr.wind.spectra.cdrdbconsumernova.HasOutageResponse hor = iws.hasOutage(ho, "spectra",
 							"YtfLwvEuCAly9fJS6R46");
 
 					String cdrDBResponse = askCDRDBForOutage(hor); // "y" or "n" - 300msec Max Response Time
@@ -789,7 +799,7 @@ public class CLIOutage
 
 				// Update asynchronously - Add Caller to Caller data table (Caller_Data) with empty values for IncidentID, Affected Services & Scheduling
 				Update_CallerDataTable ucdt = new Update_CallerDataTable(dbs, s_dbs, CLIProvided, foundIncidentID,
-						allAffectedServices, foundScheduled, foundOutageMsg, backupEligible, RequestID, systemID);
+						allAffectedServices, foundScheduled, foundOutageMsg, backupEligible, RequestID, systemID, Company);
 				ucdt.run();
 
 				ponla = new ProductOfNLUActive(this.requestID, CLIProvided, "Yes", foundIncidentID, foundPriority,
@@ -804,7 +814,7 @@ public class CLIOutage
 
 			// Update asynchronously - Add Caller to Caller data table (Caller_Data) with empty values for IncidentID, Affected Services & Scheduling
 			Update_CallerDataTable ucdt = new Update_CallerDataTable(dbs, s_dbs, CLIProvided, "", "", "", "", "",
-					RequestID, systemID);
+					RequestID, systemID, Company);
 			ucdt.run();
 
 			logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - No Service affection for CLI: "
@@ -817,7 +827,7 @@ public class CLIOutage
 			// Send request and ask CDR DB for Outage
 			// **************************************
 			WebCDRDBService myWebService = new WebCDRDBService();
-			gr.wind.spectra.cdrdbconsumer.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
+			gr.wind.spectra.cdrdbconsumernova.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 			HasOutage ho = new HasOutage();
 			Map<String, String> fields = dbs.getCDRDB_Parameters(tablePrefix + "Prov_Internet_Resource_Path", tablePrefix + "AAA21_NMAP",
@@ -828,6 +838,7 @@ public class CLIOutage
 
 			ho.setAAAUsername(fields.get("Username"));
 			ho.setRequestID(RequestID);
+			ho.setCompany(Company);
 			ho.setCli(CLIProvided);
 
 			// Check if AAA DSLAM exist, if not pick up WindOwnedElement
@@ -852,7 +863,7 @@ public class CLIOutage
 			try
 			{
 				String specificOutageMessage = "msg1";
-				gr.wind.spectra.cdrdbconsumer.HasOutageResponse hor = iws.hasOutage(ho, "spectra",
+				gr.wind.spectra.cdrdbconsumernova.HasOutageResponse hor = iws.hasOutage(ho, "spectra",
 						"YtfLwvEuCAly9fJS6R46");
 
 				String cdrDBResponse = askCDRDBForOutage(hor); // "y" or "n" - 300msec Max Response Time
@@ -902,7 +913,7 @@ public class CLIOutage
 		return ponla;
 	}
 
-	private String askCDRDBForOutage(gr.wind.spectra.cdrdbconsumer.HasOutageResponse hor)
+	private String askCDRDBForOutage(gr.wind.spectra.cdrdbconsumernova.HasOutageResponse hor)
 	{
 		// How do I call some blocking method with a timeout in Java?
 		// https://stackoverflow.com/questions/1164301/how-do-i-call-some-blocking-method-with-a-timeout-in-java
