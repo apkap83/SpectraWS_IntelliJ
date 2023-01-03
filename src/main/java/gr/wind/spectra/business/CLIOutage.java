@@ -613,7 +613,7 @@ public class CLIOutage
 				gr.wind.spectra.cdrdbconsumernova.InterfaceWebCDRDB iws = myWebService.getWebCDRDBPort();
 
 				HasOutage ho = new HasOutage();
-				Map<String, String> fields = dbs.getCDRDB_Parameters(tablePrefix + "Prov_Internet_Resource_Path", "AAA21_NMAP",
+				Map<String, String> fields = dbs.getCDRDB_Parameters(tablePrefix + "Prov_Internet_Resource_Path", tablePrefix + "AAA21_NMAP",
 						new String[] { "A.CliValue", "A.Username",
 								"B.Active_Element as \"AAA DLSAM Name\", A.ActiveElement as \"WindOwnedElement\"",
 								" A.PASPORT_COID" },
