@@ -36,7 +36,7 @@ public class IncidentOutageToCSV
 			this.exportFileDir = "/opt/ExportedFiles/AllClosedOutages/";
 			this.tablePrefix = windTableNamePrefix;
 		} else if (dbs.getClass().toString().equals("class gr.wind.spectra.business.TnovaDynamicDBOperations")) {
-			this.exportFileDir = "/opt/ExportedFiles/AllClosedOutages/Nova_Env/";
+			this.exportFileDir = "/opt/ExportedFiles/AllClosedOutages/Nova_Live_Env/";
 			this.tablePrefix = novaTableNamePrefix;
 			this.outageID = outageID.replace("Nova_","");
 		}
