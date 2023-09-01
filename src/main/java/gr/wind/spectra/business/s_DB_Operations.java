@@ -590,7 +590,7 @@ public class s_DB_Operations implements iStatic_DB_Operations {
 		Help_Func hf = new Help_Func();
 
 		int numOfRowsUpdated = 0;
-		// update SmartOutageDB.Test_SubmittedIncidents set Duration = '2' where OutageID =
+		// update SmartOutageDB.SubmittedIncidents set Duration = '2' where OutageID =
 		// '5' and IncidentID = 'INC1';
 		String sqlQuery = "UPDATE " + tableName + " SET " + hf.generateCommaPredicateQuestionMarks(columnNamesForUpdate)
 				+ " WHERE " + hf.generateANDPredicateQuestionMarks(predicateColumns);

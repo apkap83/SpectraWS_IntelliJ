@@ -164,7 +164,7 @@ public class OpenningIncidentOutageToCSV
 		if (outageAffectedService.equals("Data"))
 		{
 			Path exportedFileName = Paths.get(exportFileDir, "Spectra_CLIs_Affected_INC_" + incidentID + "_OutageID_" + outageID + "_Data_" + currentDate + ".csv");
-//			String exportedFileName = "/opt/ExportedFiles/AllOpenedOutages/Test_Env/Spectra_CLIs_Affected_INC_"
+//			String exportedFileName = "/opt/ExportedFiles/AllOpenedOutages/Spectra_CLIs_Affected_INC_"
 //					+ incidentID + "_OutageID_" + outageID + "_Data_" + currentDate + ".csv";
 
 			HierarchySelected = this.replaceHierarchyColumns(HierarchySelected, "Data");
@@ -196,7 +196,7 @@ public class OpenningIncidentOutageToCSV
 					hf.hierarchyStringTypes(HierarchySelected), ngaTypes);
 			sCSV.start();
 		}
-		// If the closed incident is a "Voice" affected one
+		// If the open/closed incident is a "Voice" affected one
 		else if (outageAffectedService.equals("Voice"))
 		{
 			Path exportedFileName = Paths.get(exportFileDir,"Spectra_CLIs_Affected_INC_"
