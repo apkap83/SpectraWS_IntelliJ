@@ -21,7 +21,6 @@ public class Update_CallerDataTable_ForMassiveOutage extends Thread
     String requestID;
     String systemID;
 
-    private String tablePrefix;
     private final String windTableNamePrefix = "";
     private final String novaTableNamePrefix = "Nova_";
 
@@ -41,14 +40,6 @@ public class Update_CallerDataTable_ForMassiveOutage extends Thread
         this.systemID = systemID;
         this.Company = Company;
 
-
-        // Check if Export is for Nova or Wind
-        if (dbs.getClass().toString().equals("class gr.wind.spectra.business.DB_Operations")) {
-            this.tablePrefix = windTableNamePrefix;
-        } else if (dbs.getClass().toString().equals("class gr.wind.spectra.business.TnovaDynamicDBOperations")) {
-            this.tablePrefix = novaTableNamePrefix;
-
-        }
     }
 
     @Override
@@ -61,9 +52,19 @@ public class Update_CallerDataTable_ForMassiveOutage extends Thread
             message = "";
         }
 
+        //systemID, CLIProvided, hf.now(), IncidentID, allAffectedServices, foundScheduled, message, backupEligible
+        System.out.println("systemID = " + systemID);
+        System.out.println("CLIProvided = " + CLIProvided);
+        System.out.println("IncidentID = " + IncidentID);
+        System.out.println("allAffectedServices = " + allAffectedServices);
+        System.out.println("foundScheduled = " + foundScheduled);
+        System.out.println("message = " + message);
+        System.out.println("backupEligible = " + backupEligible);
+
+
         try
         {
-            s_dbs.insertValuesInTable(tablePrefix + "Caller_Data",
+            s_dbs.insertValuesInTable("Caller_Data",
                     new String[] { "Requestor", "CliValue", "DateTimeCalled", "Affected_by_IncidentID",
                             "AffectedServices", "Scheduled", "Message", "BackupEligible", "CSSCOLLECTIONNAME",
                             "PAYTVSERVICES", "NGA_TYPE", "GeneralArea", "SiteName", "Concentrator", "AccessService",
