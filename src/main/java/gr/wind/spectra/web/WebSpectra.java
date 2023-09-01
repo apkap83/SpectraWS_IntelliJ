@@ -2320,21 +2320,19 @@ public class WebSpectra implements InterfaceWebSpectra
 				hf.validateDelimitedValues("Service", Service, "\\|", new String[] { "Voice", "Data", "IPTV" });
 			}
 
-			// Check if the value provided in CliValue field is a CLI or a TV_ID
-			// It is a TV_ID
-			if (CLI.contains("-") || !CLI.startsWith("2")) {
-				// It is a TV_ID...
-				Outage_For_Massive_TV ofmt = new Outage_For_Massive_TV(dbs, s_dbs, RequestID, SystemID);
-				ponla = ofmt.checkMassiveTVOutage(RequestID, CLI);
-				return ponla;
-			} else {
-				// It is a CLI Value...
+			// Search if it is WIND subscriber
+			if (dbs != null && s_dbs != null) {
+				// Check if the value provided in CliValue field is a CLI or a TV_ID
+				// It is a TV_ID
+				if (CLI.contains("-") || !CLI.startsWith("2")) {
+					// It is a TV_ID...
+					Outage_For_Massive_TV ofmt = new Outage_For_Massive_TV(dbs, s_dbs, RequestID, SystemID);
+					ponla = ofmt.checkMassiveTVOutage(RequestID, CLI);
+					return ponla;
+				} else {
+					// It is a CLI Value...
 
-				// Check if CliValue is found in WIND or Nova Databases (Table Cli_Mappings that exists in both DBs)
-
-				// Search if it is WIND subscriber
-				if (dbs != null && s_dbs != null) {
-
+					// Check if CliValue is found in WIND or Nova Databases (Table Cli_Mappings that exists in both DBs)
 					try {
 						boolean foundInWind = dbs.checkIfStringExistsInSpecificColumn("Cli_Mappings",
 								"CliValue", CLI);
@@ -2350,7 +2348,7 @@ public class WebSpectra implements InterfaceWebSpectra
 						e.printStackTrace();
 					}
 				}
-
+			}
 				// Search if it is Nova subscriber
 				if (novaDynDBOper != null && novaStaticDBOper != null && subscriberFoundForWind == false) {
 					try {
@@ -2374,8 +2372,6 @@ public class WebSpectra implements InterfaceWebSpectra
 						e.printStackTrace();
 					}
 				}
-			}
-
 		} catch (Exception e)
 		{
 			throw e;

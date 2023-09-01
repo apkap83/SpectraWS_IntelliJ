@@ -52,16 +52,6 @@ public class Update_CallerDataTable_ForMassiveOutage extends Thread
             message = "";
         }
 
-        //systemID, CLIProvided, hf.now(), IncidentID, allAffectedServices, foundScheduled, message, backupEligible
-        System.out.println("systemID = " + systemID);
-        System.out.println("CLIProvided = " + CLIProvided);
-        System.out.println("IncidentID = " + IncidentID);
-        System.out.println("allAffectedServices = " + allAffectedServices);
-        System.out.println("foundScheduled = " + foundScheduled);
-        System.out.println("message = " + message);
-        System.out.println("backupEligible = " + backupEligible);
-
-
         try
         {
             s_dbs.insertValuesInTable("Caller_Data",
