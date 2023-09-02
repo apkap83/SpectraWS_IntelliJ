@@ -71,6 +71,9 @@ public class Outage_For_Massive_TV {
                     RequestID, systemID, "Nova");
             ucdt.run();
 
+            // Update Statistics
+            s_dbs.updateUsageStatisticsForMethod("NLU_Active_Neg");
+
             return new ProductOfNLUActive(this.requestID, TV_ID, "No", "none", "none", "none", "none",
                     "none", "none", "none", "NULL", "NULL", "NULL");
         }
@@ -85,6 +88,14 @@ public class Outage_For_Massive_TV {
         if (!TypeOfTV_ID.equals("OTT") && !TypeOfTV_ID.equals("DTH")) {
             logger.info("SysID: " + systemID + " ReqID: " + RequestID + " - TV_ID: "
                     + TV_ID + " has TV_Service: " + TypeOfTV_ID + " - Expected OTT or DTH Only - Aborting Check");
+
+            // Update asynchronously - Add Caller to Caller data table (Caller_Data) with empty values for IncidentID, Affected Services & Scheduling
+            Update_CallerDataTable_ForMassiveOutage ucdt = new Update_CallerDataTable_ForMassiveOutage(dbs, s_dbs, TV_ID, "", "", "", "", "",
+                    RequestID, systemID, "Nova");
+            ucdt.run();
+
+            // Update Statistics
+            s_dbs.updateUsageStatisticsForMethod("NLU_Active_Neg");
 
             return new ProductOfNLUActive(this.requestID, TV_ID, "No", "none", "none", "none", "none",
                     "none", "none", "none", "NULL", "NULL", "NULL");

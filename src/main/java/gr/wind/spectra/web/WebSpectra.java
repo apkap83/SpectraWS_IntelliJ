@@ -2326,6 +2326,7 @@ public class WebSpectra implements InterfaceWebSpectra
 				// It is a TV_ID
 				if (CLI.contains("-") || !CLI.startsWith("2")) {
 					// It is a TV_ID...
+					subscriberFoundForWind = true;
 					Outage_For_Massive_TV ofmt = new Outage_For_Massive_TV(dbs, s_dbs, RequestID, SystemID);
 					ponla = ofmt.checkMassiveTVOutage(RequestID, CLI);
 					return ponla;
