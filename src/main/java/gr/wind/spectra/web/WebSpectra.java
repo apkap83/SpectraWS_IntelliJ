@@ -2278,6 +2278,10 @@ public class WebSpectra implements InterfaceWebSpectra
 			}
 		}
 
+		final String OTT_OUTAGE_HIERARCHY = "Massive_TV_Outage->TV_Service=ALL_EON_Boxes";
+		final String SATELLITE_OUTAGE_HIERARCHY = "Massive_TV_Outage->TV_Service=ALL_Satellite_Boxes";
+		boolean MassiveTVOutageIsOpen = false;
+
 		// Interface for DB Operations (used either for WIND or Nova)
 		iDB_Operations dbOps = null;
 		iStatic_DB_Operations s_dbOps = null;
@@ -2322,6 +2326,24 @@ public class WebSpectra implements InterfaceWebSpectra
 
 			// Search if it is WIND subscriber
 			if (dbs != null && s_dbs != null) {
+				// Check if there is Massive TV Outage Incident Open
+				// 1. Massive_TV_Outage->TV_Service=ALL_Satellite_Boxes"
+				// 2. Massive_TV_Outage->TV_Service=ALL_EON_Boxes
+				// Check if we have Open EON TV Outage Incident and Will-Be-Published Yes for IPTV Service
+				boolean weHaveMassiveEONIncident = s_dbs.checkIfCriteriaExists("SubmittedIncidents",
+						new String[]{"IncidentStatus", "HierarchySelected", "WillBePublished" , "AffectedServices"},
+						new String[]{"OPEN", OTT_OUTAGE_HIERARCHY, "Yes", "IPTV"}, new String[]{"String", "String", "String", "String"});
+
+				// Check if we have Open Satellite TV Outage Incident and Will-Be-Published Yes for IPTV Service
+				boolean weHaveMassiveSatelliteIncident = s_dbs.checkIfCriteriaExists("SubmittedIncidents",
+						new String[]{"IncidentStatus", "HierarchySelected", "WillBePublished" , "AffectedServices"},
+						new String[]{"OPEN", SATELLITE_OUTAGE_HIERARCHY, "Yes", "IPTV"}, new String[]{"String", "String", "String", "String"});
+
+				// Massive TV Incidents are Opened only in WIND Submitted Incidents Table
+				if (weHaveMassiveEONIncident || weHaveMassiveSatelliteIncident) {
+					MassiveTVOutageIsOpen = true;
+				}
+
 				// Check if the value provided in CliValue field is a CLI or a TV_ID
 				// It is a TV_ID
 				if (CLI.contains("-") || !CLI.startsWith("2")) {
@@ -2333,8 +2355,71 @@ public class WebSpectra implements InterfaceWebSpectra
 				} else {
 					// It is a CLI Value...
 
-					// Check if CliValue is found in WIND or Nova Databases (Table Cli_Mappings that exists in both DBs)
 					try {
+						// Check if CliValue is found in WIND or Nova Databases (Table Cli_Mappings that exists in both DBs)
+						if (MassiveTVOutageIsOpen)
+						{
+							boolean foundInWind = dbs.checkIfStringExistsInSpecificColumn("Cli_Mappings",
+									"CliValue", CLI);
+
+							if (foundInWind) {
+								CLIOutage co = new CLIOutage(dbs, s_dbs, RequestID, SystemID, "FOUND_FOR_WIND");
+								ponla = co.checkCLIOutage(RequestID, CLI, Service);
+								return ponla;
+							}
+
+							boolean foundInNova = novaDynDBOper.checkIfStringExistsInSpecificColumn("Nova_Cli_Mappings",
+									"CliValue", CLI);
+
+							if (foundInNova) {
+								ProductOfNLUActive novaPonla = null;
+								ProductOfNLUActive windPonla = null;
+								List<String> AffectedService = new ArrayList<>();
+
+								boolean novaVoiceAffected = false;
+								boolean novaDataAffected = false;
+								boolean massiveIPTVAffected = false;
+
+								// Searching for Outages in Nova DB
+								CLIOutage co_nova = new CLIOutage(novaDynDBOper, novaStaticDBOper, RequestID, SystemID, "FOUND_FOR_NOVA");
+								novaPonla = co_nova.checkCLIOutage(RequestID, CLI, Service);
+
+								if (novaPonla.getAffected().equals("Yes")) {
+									if (novaPonla.getAffected_services().contains("Voice")){
+										novaVoiceAffected = true;
+									}
+									if (novaPonla.getAffected_services().contains("Data")){
+										novaDataAffected = true;
+									}
+								}
+
+								// Searching for IPTV Outage in Wind DB
+								CLIOutage co_wind = new CLIOutage(dbs, s_dbs, RequestID, SystemID, "FOUND_FOR_NOVA");
+								windPonla = co_wind.checkCLIOutage(RequestID, CLI, Service);
+
+								if (windPonla.getAffected().equals("Yes")) {
+									massiveIPTVAffected = true;
+								}
+
+								if (novaVoiceAffected) {
+									AffectedService.add("Voice");
+								}
+
+								if (novaDataAffected) {
+									AffectedService.add("Data");
+								}
+
+								if (massiveIPTVAffected) {
+									AffectedService.add("IPTV");
+								}
+
+								windPonla.setAffected_services(String.join("|", AffectedService));
+
+								return windPonla;
+							}
+
+						}
+						
 						boolean foundInWind = dbs.checkIfStringExistsInSpecificColumn("Cli_Mappings",
 								"CliValue", CLI);
 

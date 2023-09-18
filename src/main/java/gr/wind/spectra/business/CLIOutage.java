@@ -479,8 +479,10 @@ public class CLIOutage
 					tofmTV_Result = tofmTV.checkMassiveTVOutage(RequestID, TV_ID);
 
 					// If There is Massive TV Service Affection Then Publish it
-					if (tofmTV_Result.getAffected().equals("Yes")) {
-						if (Scheduled.equals("No") || (Scheduled.equals("Yes") && isOutageWithinScheduledRange)) {
+					if (tofmTV_Result.getAffected().equals("Yes"))
+					{
+						if (Scheduled.equals("No") || (Scheduled.equals("Yes") && isOutageWithinScheduledRange))
+						{
 							foundIncidentID = tofmTV_Result.getIncidentID();
 							foundPriority = tofmTV.getPriority();
 							foundScheduled = tofmTV_Result.getScheduled();
