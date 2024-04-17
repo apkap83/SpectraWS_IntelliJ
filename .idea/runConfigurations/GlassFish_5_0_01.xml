@@ -4,13 +4,10 @@
     <option name="PORT" value="4848" />
     <option name="LOCAL" value="false" />
     <option name="OPEN_IN_BROWSER" value="false" />
-    <option name="UPDATING_POLICY" value="redeploy-artifacts" />
+    <option name="UPDATING_POLICY" value="hot-swap-classes" />
     <deployment>
-      <artifact name="SpectraWS:war">
-        <settings>
-          <option name="contextRoot" value="/SpectraWS" />
-          <option name="defaultContextRoot" value="false" />
-        </settings>
+      <artifact name="Spectra_WS:war">
+        <settings />
       </artifact>
     </deployment>
     <server-settings>
@@ -49,7 +46,7 @@
     </RunnerSettings>
     <method v="2">
       <option name="BuildArtifacts" enabled="true">
-        <artifact name="SpectraWS:war" />
+        <artifact name="Spectra_WS:war" />
       </option>
     </method>
   </configuration>

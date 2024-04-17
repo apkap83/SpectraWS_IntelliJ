@@ -2393,7 +2393,7 @@ public class WebSpectra implements InterfaceWebSpectra
 									}
 								}
 
-								// Searching for IPTV Outage in Wind DB
+								// Searching for IPTV Outage in Nova DB
 								CLIOutage co_wind = new CLIOutage(dbs, s_dbs, RequestID, SystemID, "FOUND_FOR_NOVA");
 								windPonla = co_wind.checkCLIOutage(RequestID, CLI, Service);
 
@@ -2413,9 +2413,9 @@ public class WebSpectra implements InterfaceWebSpectra
 									AffectedService.add("IPTV");
 								}
 
-								windPonla.setAffected_services(String.join("|", AffectedService));
+								novaPonla.setAffected_services(String.join("|", AffectedService));
 
-								return windPonla;
+								return novaPonla;
 							}
 
 						}
