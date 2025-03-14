@@ -34,10 +34,17 @@ public class TnovaStaticDataSource
         config.setDriverClassName("com.mysql.cj.jdbc.Driver");
         config.setUsername(USERNAME1);
         config.setPassword(PASSWORD1);
-        config.setMaxLifetime(600000);
-        config.setConnectionTimeout(260);
-        config.setValidationTimeout(250);
-        config.setMaximumPoolSize(14);
+
+        // Connection Pool Settings
+        config.setMaximumPoolSize(18);        // Keep as is if the workload is stable
+        config.setMinimumIdle(5);             // Maintain a few idle connections
+        config.setIdleTimeout(300000);        // 5 min before idle connections are removed
+        config.setMaxLifetime(1800000);       // Max connection age: 30 min (prevents stale connections)
+
+        // Connection Acquisition
+        config.setConnectionTimeout(30000); // Wait 30 seconds for a free connection
+        config.setValidationTimeout(5000);  // Allow 5 seconds for connection validation
+
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "700");
         config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
